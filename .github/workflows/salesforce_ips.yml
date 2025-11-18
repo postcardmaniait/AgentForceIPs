@@ -11,13 +11,11 @@ jobs:
       - name: Extract CIDR
         run: |
           curl -fsS https://ip-ranges.salesforce.com/ip-ranges.json |
-          jq -r '.prefixes[].ip_prefix, .ipv6_prefixes[].ipv6_prefix' |
+          jq -r '.prefixes[].ip_prefix[]' |
           sort -V > salesforce-ips.txt
       - name: Commit and push if changed
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add salesforce-ips.txt
-          git diff --quiet && exit 0
-          git commit -m "Update Salesforce IPs"
-          git push
+          if git diff --quiet --staged; then echo "No changes"; else git commit -m "Update Salesforce IPs"; git push; fi
