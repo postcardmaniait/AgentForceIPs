@@ -10,6 +10,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Fetch full Salesforce IP ranges
         run: curl -fsSL https://raw.githubusercontent.com/mixmaxhq/salesforce-ip-addresses/master/index.js | grep -oE "'[0-9./]+'" | tr -d "'" | sort -V > salesforce-ips2.txt
@@ -19,4 +21,9 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add salesforce-ips.txt
-          if git diff --quiet --staged; then echo "No changes"; else git commit -m "Update Salesforce IPs"; git push; fi
+          if git diff --quiet --staged; then
+            echo "No changes"
+          else
+            git commit -m "Update Salesforce IPs"
+            git push || git push  # retry on transient 500
+          fi
