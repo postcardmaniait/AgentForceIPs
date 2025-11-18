@@ -1,0 +1,24 @@
+name: Fetch Salesforce IPs
+
+on:
+  schedule:
+    - cron: '0 0 * * *'  # Daily at midnight UTC
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch and parse
+        run: |
+          curl -s "https://help.salesforce.com/s/articleView?id=000384438&type=1" | \
+          grep -oE '([0-9]{1,3}\.){3}[0-9]{1,3}/[0-9]{1,2}' | \
+          sort -u > salesforce-cidrs.txt
+          cat salesforce-cidrs.txt
+      - name: Commit if changed
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add salesforce-cidrs.txt
+          git diff --quiet && exit 0
+          git commit -m "Update Salesforce IPs $(date +%F)"
+          git push
