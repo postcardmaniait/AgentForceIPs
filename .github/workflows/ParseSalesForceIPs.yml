@@ -10,10 +10,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Install parser
+        run: sudo apt-get update && sudo apt-get install -y pup
       - name: Extract full CIDR from article
         run: |
-          curl -fsSL "https://help.salesforce.com/s/articleView?id=000384438&type=1" -o page.html
-          grep -oE '([0-9]{1,3}\.){3}[0-9]{1,3}/[0-9]{1,2}|([0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4}/[0-9]{1,3}' page.html | sort -Vu > salesforce-ips.txt
+          pup 'table json{}' < <(curl -fsSL "https://help.salesforce.com/s/articleView?id=000384438&type=1") |
+          jq -r '.. | .text? // empty | match("([0-9]{1,3}\\\\.){3}[0-9]{1,3}/[0-9]{1,2}|[0-9a-fA-F:]+/[0-9]{1,3}"; "g").string' |
+          sort -Vu > salesforce-ips2.txt
       - name: Commit and push if changed
         run: |
           git config user.name "github-actions[bot]"
