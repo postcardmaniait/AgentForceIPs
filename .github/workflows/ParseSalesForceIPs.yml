@@ -1,4 +1,4 @@
-name: Daily Salesforce CIDR
+name: ParseSalesForceIPs
 on:
   schedule:
     - cron: '0 0 * * *'
@@ -12,7 +12,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Fetch full Salesforce IP ranges
-        run: curl -fsSL https://raw.githubusercontent.com/mixmaxhq/salesforce-ip-addresses/master/index.js | grep -oE "'[0-9./]+'" | tr -d "'" | sort -V > salesforce-ips.txt
+        run: curl -fsSL https://raw.githubusercontent.com/mixmaxhq/salesforce-ip-addresses/master/index.js | grep -oE "'[0-9./]+'" | tr -d "'" | sort -V > salesforce-ips2.txt
 
       - name: Commit and push if changed
         run: |
