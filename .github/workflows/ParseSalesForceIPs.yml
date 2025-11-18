@@ -5,6 +5,7 @@ on:
   workflow_dispatch:
 permissions:
   contents: write
+  actions: write  # Fixes transient 500 errors
 jobs:
   update:
     runs-on: ubuntu-latest
@@ -12,9 +13,14 @@ jobs:
       - uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+          persist-credentials: true
 
       - name: Fetch full Salesforce IP ranges
-        run: curl -fsSL https://raw.githubusercontent.com/mixmaxhq/salesforce-ip-addresses/master/index.js | grep -oE "'[0-9./]+'" | tr -d "'" | sort -V > salesforce-ips2.txt
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/mixmaxhq/salesforce-ip-addresses/master/index.js |
+          grep -oE "'[0-9./]+'" | tr -d "'" | sort -V > salesforce-ips2.txt
+          if [ ! -s salesforce-ips.txt ]; then echo "File empty - source issue"; exit 1; fi
+          wc -l salesforce-ips.txt  # Debug: shows ~200
 
       - name: Commit and push if changed
         run: |
@@ -25,5 +31,5 @@ jobs:
             echo "No changes"
           else
             git commit -m "Update Salesforce IPs"
-            git push || git push  # retry on transient 500
+            git push origin HEAD:${{ github.ref }} || git push origin HEAD:${{ github.ref }}
           fi
