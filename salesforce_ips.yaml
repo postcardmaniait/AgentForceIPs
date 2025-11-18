@@ -10,7 +10,7 @@ jobs:
       - name: Extract CIDR to txt
         run: |
           curl -s https://ip-ranges.salesforce.com/ip-ranges.json |
-          jq -r '.[][].cidr' |
+          jq -r '.prefixes[].ip_prefix[]' |
           sort -V > salesforce-ips.txt
       - name: Commit and push
         run: |
