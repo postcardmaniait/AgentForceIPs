@@ -1,0 +1,21 @@
+name: Daily Salesforce CIDR
+on:
+  schedule:
+    - cron: '0 0 * * *'
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Extract CIDR to txt
+        run: |
+          curl -s https://ip-ranges.salesforce.com/ip-ranges.json |
+          jq -r '.[][].cidr' |
+          sort -V > salesforce-ips.txt
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add salesforce-ips.txt
+          git commit -m "Daily CIDR update" || exit 0
+          git push
