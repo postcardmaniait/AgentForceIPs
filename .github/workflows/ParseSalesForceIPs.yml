@@ -10,20 +10,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Render page with browser
-        uses: browserless/chrome-action@v1
+      - name: Render page with puppeteer
+        uses: cloudflare/puppeteer-action@v1
         with:
-          url: https://help.salesforce.com/s/articleView?id=000384438&type=1
-          action: html
-          wait-for: table
+          args: |
+            const fs = require('fs');
+            const page = await browser.newPage();
+            await page.goto('https://help.salesforce.com/s/articleView?id=000384438&type=1');
+            await page.waitForSelector('table');
+            const html = await page.content();
+            fs.writeFileSync('page.html', html);
 
       - name: Extract CIDRs
         run: |
-          grep -oE '([0-9]{1,3}\.){3}[0-9]{1,3}/[0-9]{1,2}' index.html | sort -Vu > salesforce-ips.txt
-          wc -l salesforce-ips2.txt
+          grep -oE '([0-9]{1,3}\.){3}[0-9]{1,3}/[0-9]{1,2}' page.html | sort -Vu > salesforce-ips2.txt
+          wc -l salesforce-ips.txt  # ~200
 
       - name: Commit and push if changed
         run: |
