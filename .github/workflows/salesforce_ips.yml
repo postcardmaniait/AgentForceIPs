@@ -3,17 +3,17 @@ on:
   schedule:
     - cron: '0 0 * * *'
   workflow_dispatch:
+permissions:
+  contents: write
 jobs:
   update:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
       - name: Extract CIDR
         run: |
           curl -fsS https://ip-ranges.salesforce.com/ip-ranges.json |
-          jq -r '.prefixes[].ip_prefix, .ipv6_prefixes[].ipv6_prefix // empty' |
+          jq -r '.prefixes[].ip_prefix[]' |
           sort -V > salesforce-ips.txt
       - name: Commit and push if changed
         run: |
