@@ -15,13 +15,58 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Fetch Salesforce IP page
-        run: curl -L -o page.html "https://help.salesforce.com/s/articleView?id=000384438&type=1"
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
 
-      - name: Extract CIDRs
+      - name: Render page with Puppeteer and extract IPs from tables
         run: |
-          grep -oE '([0-9]{1,3}\.){3}[0-9]{1,3}/[0-9]{1,2}' page.html | sort -Vu > salesforce-ips2.txt
-          wc -l salesforce-ips2.txt   # should be ~200 lines
+          npm init -y
+          npm install puppeteer
+          node << 'EOF'
+          const puppeteer = require('puppeteer');
+          const fs = require('fs');
+
+          (async () => {
+            const browser = await puppeteer.launch({
+              args: ['--no-sandbox', '--disable-setuid-sandbox']
+            });
+            const page = await browser.newPage();
+            await page.setUserAgent('Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36');
+            
+            await page.goto('https://help.salesforce.com/s/articleView?id=000384438&type=1', {
+              waitUntil: 'networkidle2',
+              timeout: 30000
+            });
+
+            // Wait for tables to appear
+            await page.waitForSelector('table', { timeout: 15000 });
+
+            // Extract every IP/CIDR that appears inside any table
+            const ips = await page.evaluate(() => {
+              const found = new Set();
+              document.querySelectorAll('table').forEach(table => {
+                table.querySelectorAll('tr td, tr th').forEach(cell => {
+                  const text = cell.textContent || '';
+                  // Match both plain IPs and CIDRs (e.g. 192.168.1.1 or 192.168.1.0/24)
+                  const matches = text.match(/\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?:\/[0-9]{1,2})?\b/g) || [];
+                  matches.forEach(ip => found.add(ip));
+                });
+              });
+              return Array.from(found);
+            });
+
+            const sorted = ips.sort((a, b) => a.localeCompare(b, undefined, {numeric: true}));
+            fs.writeFileSync('salesforce-ips2.txt', sorted.join('\n'));
+            console.log(`Extracted ${sorted.length} IP/CIDR entries from tables`);
+            
+            await browser.close();
+          })();
+          EOF
+
+      - name: Show result
+        run: wc -l salesforce-ips2.txt
 
       - name: Commit and push if changed
         run: |
@@ -31,6 +76,6 @@ jobs:
           if git diff --quiet --staged; then
             echo "No changes"
           else
-            git commit -m "Update Salesforce IPs"
+            git commit -m "Update Salesforce IPs from article tables"
             git push
           fi
